@@ -96,6 +96,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_AUTHENTICATION_CLASSES': [],
+    'DEFAULT_PERMISSION_CLASSES': [],
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
     ],
@@ -109,10 +111,21 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'API de Pagos - Equipo 4',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
+    'SECURITY': [{'jwtAuth': []}],
+    'APPEND_COMPONENTS': {
+        'securitySchemes': {
+            'jwtAuth': {
+                'type': 'http',
+                'scheme': 'bearer',
+                'description': 'Token de autenticación requerido por User Service y Order Service. Ingresa el token sin el prefijo "Bearer".',
+            }
+        }
+    },
 }
 
 ORDER_SERVICE_URL = os.getenv('ORDER_SERVICE_URL', 'http://localhost:8001')
 ORDER_SERVICE_TOKEN = os.getenv('ORDER_SERVICE_TOKEN', '')
+USER_SERVICE_URL = os.getenv('USER_SERVICE_URL', 'http://18.220.79.204')
 
 LOGGING = {
     'version': 1,
