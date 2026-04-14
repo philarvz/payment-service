@@ -6,7 +6,7 @@ import logging
 
 from .models import Payment
 from .serializers import ErrorResponseSerializer, PaymentResponseSerializer, ProcessPaymentSerializer
-from .services import ExternalServiceException, OrderServiceClient
+from .services import ExternalServiceException, OrderServiceClient, UserServiceClient
 
 
 logger = logging.getLogger('payment_service')
@@ -25,8 +25,9 @@ class ProcessPaymentView(APIView):
             201: OpenApiResponse(response=PaymentResponseSerializer, description='Pago aprobado y pedido actualizado a PAGADO'),
             202: OpenApiResponse(response=PaymentResponseSerializer, description='Pago aprobado, pero no se pudo actualizar el pedido'),
             400: OpenApiResponse(response=ErrorResponseSerializer, description='Datos inválidos'),
+            401: OpenApiResponse(response=ErrorResponseSerializer, description='Token inválido o expirado'),
             402: OpenApiResponse(response=PaymentResponseSerializer, description='Pago rechazado'),
-            404: OpenApiResponse(response=ErrorResponseSerializer, description='Pedido no encontrado'),
+            404: OpenApiResponse(response=ErrorResponseSerializer, description='Cliente o pedido no encontrado'),
             409: OpenApiResponse(response=ErrorResponseSerializer, description='Conflicto de usuario o estado del pedido'),
             503: OpenApiResponse(response=ErrorResponseSerializer, description='Servicio externo no disponible'),
         },
@@ -42,9 +43,16 @@ class ProcessPaymentView(APIView):
             )
 
         payload = serializer.validated_data
-        order_client = OrderServiceClient()
+        auth_header = request.headers.get('Authorization', '')
+        token = auth_header[len('Bearer '):] if auth_header.startswith('Bearer ') else None
+        order_client = OrderServiceClient(token=token)
+        user_client = UserServiceClient(token=token)
 
         try:
+            # 1. Validar que el cliente existe en el User Service
+            user_client.validate_client(payload['client_id'])
+
+            # 2. Obtener el pedido del Order Service
             order_data = order_client.get_order(payload['order_id'])
 
             order_user_id = (
